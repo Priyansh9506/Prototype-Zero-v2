@@ -338,6 +338,16 @@ async def get_predictions_csv(current_user: models_db.User = Depends(auth.get_cu
     
     return PREDICTIONS_DF.to_dict(orient="records")
 
+from fastapi.responses import FileResponse
+
+@app.get("/containers/{container_id}/images/{filename}")
+async def get_container_image(container_id: str, filename: str):
+    """Serve persistent container images to the dashboard gallery."""
+    image_path = settings.OUTPUT_DIR / "images" / container_id / filename
+    if not image_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(image_path)
+
 
 @app.post("/predict")
 async def predict_from_upload(
@@ -568,10 +578,20 @@ async def analyze_container_image(
     
     try:
         from PIL import Image
+        
+        image_dir = settings.OUTPUT_DIR / "images" / container_id
+        os.makedirs(image_dir, exist_ok=True)
+        
         for file in files:
-            # Save uploaded file temporarily
+            content = await file.read()
+            persistent_path = image_dir / file.filename
+            
+            # Save to persistent storage for dashboard gallery
+            with open(persistent_path, "wb") as f:
+                f.write(content)
+                
+            # Save uploaded file temporarily for inference
             with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
-                content = await file.read()
                 tmp.write(content)
                 tmp_path = tmp.name
             
@@ -597,7 +617,7 @@ async def analyze_container_image(
                     "dimensions": {"width": width, "height": height}
                 })
             finally:
-                # Clean up
+                # Clean up temp file
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
         

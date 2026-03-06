@@ -139,6 +139,23 @@ export default function DetailPanel({ container, onClose }) {
                                 </div>
                             )}
 
+                            {container.Image_Analysis.detailed_results && container.Image_Analysis.detailed_results.length > 0 && (
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7A6E5D', marginBottom: 8, letterSpacing: 0.5 }}>EVIDENCE GALLERY</div>
+                                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                                        {container.Image_Analysis.detailed_results.map((res, idx) => (
+                                            <div key={idx} style={{ position: 'relative', width: 64, height: 64, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(0,0,0,0.1)' }}>
+                                                <img 
+                                                    src={`http://localhost:8000/containers/${container.Container_ID}/images/${res.filename}`} 
+                                                    alt={`evidence-${idx}`} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div style={{ color: '#7A6E5D', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>
                                 Last analyzed: {new Date(container.Image_Analysis.timestamp).toLocaleString()}
                             </div>

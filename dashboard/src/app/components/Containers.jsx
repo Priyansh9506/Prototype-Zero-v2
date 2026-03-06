@@ -51,7 +51,11 @@ export default function Containers({ data }) {
 
     const filtered = useMemo(() => {
         let result = [...data];
-        if (filter !== 'All') result = result.filter(r => r.Risk_Level === filter);
+        if (filter === 'Imaged') {
+            result = result.filter(r => r.Image_Analysis != null);
+        } else if (filter !== 'All') {
+            result = result.filter(r => r.Risk_Level === filter);
+        }
         if (search) result = result.filter(r => r.Container_ID?.toLowerCase().includes(search.toLowerCase()));
         result.sort((a, b) => {
             const av = a[sortKey], bv = b[sortKey];
@@ -92,7 +96,7 @@ export default function Containers({ data }) {
                                 onFocus={(e) => e.target.style.borderColor = '#C06820'} onBlur={(e) => e.target.style.borderColor = '#D9CDBA'}
                             />
                         </div>
-                        {['All', 'Critical', 'Medium Risk', 'Low Risk'].map(f => (
+                        {['All', 'Critical', 'Medium Risk', 'Low Risk', 'Imaged'].map(f => (
                             <button key={f} onClick={() => setFilter(f)} style={{
                                 background: filter === f ? (f === 'Critical' ? '#C6282815' : f === 'Medium Risk' ? '#E6510015' : f === 'Low Risk' ? '#2E7D3215' : '#C0682010') : 'transparent',
                                 border: `1px solid ${filter === f ? (f === 'Critical' ? '#C6282840' : f === 'Medium Risk' ? '#E6510040' : f === 'Low Risk' ? '#2E7D3240' : '#C0682030') : '#D9CDBA'}`,

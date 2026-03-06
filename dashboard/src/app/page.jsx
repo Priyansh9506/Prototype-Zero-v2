@@ -137,6 +137,18 @@ export default function App() {
     };
   };
 
+  const handleAnalysisComplete = useCallback((containerId, analysisData) => {
+    setData(prev => {
+      const updated = prev.map(row => 
+        row.Container_ID === containerId 
+          ? { ...row, Image_Analysis: analysisData }
+          : row
+      );
+      saveDataToStorage(updated);
+      return updated;
+    });
+  }, []);
+
   // ── Authentication & Data Initialization ──
   useEffect(() => {
     const token = getToken();
@@ -266,7 +278,7 @@ export default function App() {
     case 'containers': ViewComponent = <Containers data={data} />; break;
     case 'analytics': ViewComponent = <Analytics data={data} />; break;
     case 'upload': ViewComponent = <UploadData onFileLoaded={processCSV} />; break;
-    case 'imageAnalysis': ViewComponent = <ImageAnalysis />; break;
+    case 'imageAnalysis': ViewComponent = <ImageAnalysis onAnalysisComplete={handleAnalysisComplete} />; break;
     case 'settings': ViewComponent = <Settings threshold={criticalThreshold} onThresholdChange={handleThresholdChange} />; break;
     case 'admin': ViewComponent = <Admin />; break;
     default: ViewComponent = <Overview data={data} />;

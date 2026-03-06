@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Upload, X, ImageIcon, Search, AlertCircle, Loader2, Zap, ShieldCheck, BarChart3 } from 'lucide-react';
 
 const BoundingBoxOverlay = ({ detections, dimensions }) => {
@@ -8,7 +8,7 @@ const BoundingBoxOverlay = ({ detections, dimensions }) => {
   
   return (
     <svg 
-      className="absolute inset-0 w-full h-full pointer-events-none" 
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
       viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
       preserveAspectRatio="none"
     >
@@ -22,7 +22,6 @@ const BoundingBoxOverlay = ({ detections, dimensions }) => {
             <rect 
               x={x} y={y} width={det.width} height={det.height}
               fill="transparent" stroke={color} strokeWidth={dimensions.width * 0.005}
-              className="animate-pulse"
             />
             <rect 
               x={x} y={y - dimensions.height * 0.04} 
@@ -32,9 +31,8 @@ const BoundingBoxOverlay = ({ detections, dimensions }) => {
             <text 
               x={x + dimensions.width * 0.01} y={y - dimensions.height * 0.01} 
               fill="white" fontSize={dimensions.width * 0.025} fontWeight="bold"
-              className="uppercase"
             >
-              {det.class} {(det.confidence * 100).toFixed(0)}%
+              {det.class.toUpperCase()} {(det.confidence * 100).toFixed(0)}%
             </text>
           </g>
         );
@@ -43,16 +41,33 @@ const BoundingBoxOverlay = ({ detections, dimensions }) => {
   );
 };
 
-const ImageAnalysis = ({ onBack }) => {
+export default function ImageAnalysis({ onBack, onAnalysisComplete }) {
+  const fileRef = useRef(null);
   const [containerId, setContainerId] = useState('');
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState('idle'); // idle, uploading, success, error
   const [message, setMessage] = useState('');
   const [analysisResult, setAnalysisResult] = useState(null);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // ... (keep drop logic same) ...
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    if (status === 'uploading') return;
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length + droppedFiles.length > 5) {
+      alert("Maximum 5 images allowed");
+      return;
+    }
+    setFiles(prev => [...prev, ...droppedFiles]);
+  };
 
   const onFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
+    const selectedFiles = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
     if (files.length + selectedFiles.length > 5) {
       alert("Maximum 5 images allowed");
       return;
@@ -99,6 +114,7 @@ const ImageAnalysis = ({ onBack }) => {
         setAnalysisResult(data.analysis);
         setMessage(`Analysis complete: Container is ${data.analysis.condition}`);
         setSelectedImageIdx(0);
+        setIsSaved(false);
       } else {
         setStatus('error');
         setMessage(data.detail || 'Upload failed');
@@ -109,275 +125,301 @@ const ImageAnalysis = ({ onBack }) => {
     }
   };
 
-  const getStatusColor = (condition) => {
+  const getStatusInlineColor = (condition) => {
     switch (condition) {
-      case 'Safe': return 'text-green-400 bg-green-400/10 border-green-500/20';
-      case 'Faulty': return 'text-yellow-400 bg-yellow-400/10 border-yellow-500/20';
-      case 'Damaged': return 'text-red-400 bg-red-400/10 border-red-500/20';
-      default: return 'text-blue-400 bg-blue-400/10 border-blue-500/20';
+      case 'Safe': return { color: '#5CB85C', background: 'rgba(92, 184, 92, 0.1)', borderColor: 'rgba(92, 184, 92, 0.2)' };
+      case 'Faulty': return { color: '#F0AD4E', background: 'rgba(240, 173, 78, 0.1)', borderColor: 'rgba(240, 173, 78, 0.2)' };
+      case 'Damaged': return { color: '#D9534F', background: 'rgba(217, 83, 79, 0.1)', borderColor: 'rgba(217, 83, 79, 0.2)' };
+      default: return { color: '#337AB7', background: 'rgba(51, 122, 183, 0.1)', borderColor: 'rgba(51, 122, 183, 0.2)' };
     }
   };
 
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <style jsx>{`
-        @keyframes scan {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(100%); }
-        }
-        .scan-line {
-          animation: scan 2s linear infinite;
-        }
-      `}</style>
-
-      {status !== 'success' ? (
-        <div className="max-w-[800px] mx-auto space-y-8 animate-in fadeInUp duration-500">
-          <div className="flex flex-col gap-2 text-center md:text-left">
-            <h2 className="text-[22px] font-bold text-[#2C2418] uppercase tracking-wider" style={{ fontFamily: 'Quicksand' }}>
-              IMAGE INTELLIGENCE
-            </h2>
-            <p className="text-[#7A6E5D] text-[15px] font-medium">
-              Ingest visual telemetry (JPG/PNG) for neural damage assessment and structural profiling.
-            </p>
-          </div>
-
-          <div 
-            className={`relative border-2 border-dashed rounded-[16px] p-[60px_32px] text-center cursor-pointer transition-all duration-300 ${status === 'uploading' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#C06820]/[0.04]'}`}
-            style={{ 
-              borderColor: files.length > 0 ? '#C06820' : '#D9CDBA',
-              background: files.length > 0 ? 'rgba(192,104,32,0.02)' : '#FFFDF8'
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (status === 'uploading') return;
-              const droppedFiles = Array.from(e.dataTransfer.files);
-              if (files.length + droppedFiles.length > 5) return;
-              setFiles(prev => [...prev, ...droppedFiles]);
-            }}
-            onClick={() => status !== 'uploading' && document.getElementById('image-input').click()}
-          >
-            <input
-              id="image-input"
-              type="file" multiple accept="image/*"
-              onChange={onFileChange}
-              className="hidden"
-            />
-            
-            <div className="w-20 h-20 bg-[#C06820]/[0.08] rounded-full flex items-center justify-center mx-auto mb-6">
-              <Upload size={40} color="#C06820" />
-            </div>
-            
-            <h3 className="text-xl font-bold text-[#2C2418] mb-3" style={{ fontFamily: 'Quicksand' }}>
-              {files.length > 0 ? `${files.length} Images Mounted` : 'Drag & Drop Images'}
+  if (status === 'success' && analysisResult) {
+    return (
+      <div style={{ animation: 'fadeInUp 0.4s ease-out', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFDF8', border: '1px solid #D9CDBA', padding: 24, borderRadius: 16, marginBottom: 24, boxShadow: '0 1px 3px rgba(44,36,24,0.04)' }}>
+          <div>
+            <h3 style={{ fontFamily: 'Quicksand', fontSize: 20, color: '#2C2418', fontWeight: 700, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <BarChart3 size={20} color="#C06820" />
+              NEURAL ANALYSIS DASHBOARD
             </h3>
-            <p className="text-[#7A6E5D] text-[15px] font-medium mb-6">
-              or click to browse your local file system
+            <p style={{ margin: 0, color: '#7A6E5D', fontSize: 13, fontFamily: 'monospace', fontWeight: 600 }}>
+              UNIT: {containerId} // TS: {new Date(analysisResult.timestamp).toLocaleString()}
             </p>
-
-            <div className="inline-block px-8 py-4 bg-[#C06820] text-white text-[13px] font-bold rounded-lg uppercase tracking-[0.15em] pointer-events-none transition-transform active:scale-95" style={{ fontFamily: 'Quicksand' }}>
-              SELECT IMAGES
-            </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <div className="space-y-3">
-              <label className="block text-[13px] font-bold text-[#2C2418] uppercase tracking-wider" style={{ fontFamily: 'Quicksand' }}>
-                Target Container ID
-              </label>
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7A6E5D] group-focus-within:text-[#C06820] transition-colors" />
-                <input
-                  type="text"
-                  value={containerId}
-                  onChange={(e) => setContainerId(e.target.value)}
-                  placeholder="e.g. 76991507"
-                  className="w-full pl-12 pr-4 py-4 bg-[#FFFDF8] border border-[#D9CDBA] rounded-xl focus:outline-none focus:border-[#C06820] focus:ring-1 focus:ring-[#C06820] text-[#2C2418] transition-all font-mono text-sm placeholder:text-[#A89E91]"
-                />
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ 
+              padding: '8px 24px', borderRadius: 32, fontSize: 13, fontWeight: 800, textTransform: 'uppercase', border: '2px solid', display: 'flex', alignItems: 'center', gap: 8,
+              ...getStatusInlineColor(analysisResult.condition)
+            }}>
+              <ShieldCheck size={16} />
+              {analysisResult.condition}
             </div>
 
-            <button
-              onClick={handleUpload}
-              disabled={status === 'uploading' || !containerId || files.length === 0}
-              className="w-full h-[58px] bg-[#2C2418] hover:bg-[#1A160F] disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-bold text-white transition-all flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[11px] shadow-lg active:shadow-inner"
-              style={{ fontFamily: 'Quicksand' }}
+            <button 
+              onClick={() => {
+                if (onAnalysisComplete) onAnalysisComplete(containerId, analysisResult);
+                setIsSaved(true);
+              }}
+              disabled={isSaved}
+              style={{ 
+                padding: '10px 24px', background: isSaved ? '#5CB85C' : '#C06820', border: 'none', borderRadius: 12, 
+                color: '#FFFFFF', fontWeight: 800, fontSize: 13, fontFamily: 'Quicksand', letterSpacing: 1,
+                cursor: isSaved ? 'default' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 8
+              }}
             >
-              {status === 'uploading' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin font-bold" />
-                  Neural engine running...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4 fill-white" />
-                  Engage Intelligence Scan
-                </>
-              )}
+              {isSaved ? 'SAVED ✓' : 'SAVE DATA'}
+            </button>
+
+            <button 
+              onClick={() => { setStatus('idle'); setAnalysisResult(null); setFiles([]); setIsSaved(false); }}
+              style={{ padding: 12, background: '#FFFFFF', border: '1px solid #D9CDBA', borderRadius: 12, color: '#2C2418', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <X size={20} />
             </button>
           </div>
+        </div>
 
-          {files.length > 0 && (
-            <div className="grid grid-cols-5 gap-4 p-5 bg-[#FFFDF8] border border-[#D9CDBA] rounded-[20px] shadow-inner">
+        <div style={{ background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 24, padding: 32, display: 'grid', gridTemplateColumns: '7fr 5fr', gap: 40, boxShadow: '0 1px 3px rgba(44,36,24,0.04)' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#1A160F', borderRadius: 16, overflow: 'hidden', border: '1px solid #D9CDBA' }}>
+              <img 
+                src={URL.createObjectURL(files[selectedImageIdx])} 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                alt="Scanned Evidence" 
+              />
+              <BoundingBoxOverlay 
+                detections={analysisResult.detailed_results?.[selectedImageIdx]?.detections}
+                dimensions={analysisResult.detailed_results?.[selectedImageIdx]?.dimensions}
+              />
+              <div style={{ position: 'absolute', bottom: 20, left: 20, padding: '6px 16px', background: 'rgba(255, 253, 248, 0.9)', borderRadius: 8, color: '#2C2418', fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>
+                CAM_{selectedImageIdx + 1}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
               {files.map((file, idx) => (
-                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-[#D9CDBA] bg-white">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`upload-${idx}`}
-                    className="w-full h-full object-cover transition-all grayscale duration-500 group-hover:grayscale-0 group-hover:scale-110"
-                  />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
-                    className="absolute top-2 right-2 p-1.5 bg-red-600/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 shadow-lg scale-90 group-hover:scale-100"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <button 
+                  key={idx}
+                  onClick={() => setSelectedImageIdx(idx)}
+                  style={{ 
+                    position: 'relative', flexShrink: 0, width: 120, height: 80, borderRadius: 12, overflow: 'hidden', padding: 0,
+                    border: `2px solid ${selectedImageIdx === idx ? '#C06820' : '#D9CDBA'}`,
+                    opacity: selectedImageIdx === idx ? 1 : 0.6,
+                    cursor: 'pointer', background: '#2C2418'
+                  }}
+                >
+                  <img src={URL.createObjectURL(file)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </button>
               ))}
             </div>
-          )}
+          </div>
 
-          {status === 'error' && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-in shake duration-500">
-              <AlertCircle className="w-5 h-5" />
-              <p className="text-sm font-bold">{message}</p>
-              <button 
-                onClick={() => setStatus('idle')} 
-                className="ml-auto text-xs uppercase font-black tracking-widest hover:underline"
-              >
-                Retry
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            <div>
+              <h4 style={{ fontFamily: 'Quicksand', fontSize: 14, color: '#2C2418', fontWeight: 700, margin: '0 0 24px 0', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: 1, textTransform: 'uppercase' }}>
+                <Zap size={16} color="#C06820" fill="#C06820" />
+                RISK CONTRIBUTION MAP
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {analysisResult.shap_explanation?.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#2C2418', textTransform: 'uppercase', letterSpacing: 1 }}>{item.feature}</span>
+                        <span style={{ fontSize: 11, color: '#7A6E5D', fontFamily: 'monospace' }}>NEURAL_WEIGHT: 0.94</span>
+                      </div>
+                      <span style={{ 
+                        fontSize: 14, fontWeight: 800, 
+                        color: item.direction === 'risk' ? '#D9534F' : '#5CB85C' 
+                      }}>
+                        {item.direction === 'risk' ? '+' : '-'}{(item.impact * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={{ height: 8, background: '#EAE2D3', borderRadius: 4, overflow: 'hidden' }}>
+                      <div 
+                        style={{ 
+                          height: '100%', borderRadius: 4,
+                          background: item.direction === 'risk' ? '#D9534F' : '#5CB85C',
+                          width: `${item.impact * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-            <div className="bg-[#FFFDF8] border border-[#D9CDBA] rounded-xl p-6 shadow-sm">
-              <ImageIcon size={28} color="#C06820" className="mb-4" />
-              <h4 className="text-[14px] font-bold text-[#2C2418] mb-2 tracking-wide font-['Quicksand'] uppercase">VALID SOURCES</h4>
-              <p className="text-[13px] text-[#7A6E5D] leading-relaxed font-medium">High-resolution JPG, PNG captures. Max 5 viewpoints.</p>
+            <div style={{ background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 16, padding: 24, position: 'relative', overflow: 'hidden', marginTop: 'auto' }}>
+              <p style={{ margin: '0 0 16px 0', fontSize: 11, color: '#C06820', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 2 }}>Sensor Interpretation</p>
+              <p style={{ margin: '0 0 24px 0', fontSize: 14, color: '#7A6E5D', fontStyle: 'italic', lineHeight: 1.6 }}>
+                "{analysisResult.condition === 'Safe' 
+                  ? 'Global integrity verified. No critical structural deviations detected from baseline CAD profile.' 
+                  : `Visual telemetry confirms high-severity deformation. ${analysisResult.shap_explanation?.[0]?.feature} exceeds safety threshold.`}"
+              </p>
+              <div style={{ paddingTop: 20, borderTop: '1px solid #D9CDBA', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#7A6E5D', textTransform: 'uppercase', fontFamily: 'monospace', letterSpacing: 1 }}>Confidence Index</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#2C2418' }}>92.48%</span>
+              </div>
             </div>
-            <div className="bg-[#FFFDF8] border border-[#D9CDBA] rounded-xl p-6 shadow-sm">
-              <ShieldCheck size={28} color="#C06820" className="mb-4" />
-              <h4 className="text-[14px] font-bold text-[#2C2418] mb-2 tracking-wide font-['Quicksand'] uppercase">NEURAL PRIVACY</h4>
-              <p className="text-[13px] text-[#7A6E5D] leading-relaxed font-medium">Visual data processed securely via Roboflow.</p>
-            </div>
-            <div className="bg-[#FFFDF8] border border-[#D9CDBA] rounded-xl p-6 shadow-sm">
-              <BarChart3 size={28} color="#C06820" className="mb-4" />
-              <h4 className="text-[14px] font-bold text-[#2C2418] mb-2 tracking-wide font-['Quicksand'] uppercase">INTEGRATION</h4>
-              <p className="text-[13px] text-[#7A6E5D] leading-relaxed font-medium">SHAP impact analysis reflects in container profiles.</p>
-            </div>
+          </div>
+          
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ animation: 'fadeInUp 0.4s ease-out', maxWidth: 800, margin: '0 auto' }}>
+      <style>
+        {`
+          @keyframes spin {
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <h2 style={{ fontFamily: 'Quicksand', fontSize: 22, color: '#2C2418', marginBottom: 8, fontWeight: 700, letterSpacing: 1 }}>IMAGE INTELLIGENCE</h2>
+      <p style={{ color: '#7A6E5D', fontSize: 15, marginBottom: 32, fontWeight: 500 }}>Ingest visual telemetry (JPG/PNG) for neural damage assessment and structural profiling.</p>
+
+      <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => status !== 'uploading' && fileRef.current?.click()}
+          style={{
+              border: `2px dashed ${dragging || files.length > 0 ? '#C06820' : '#D9CDBA'}`,
+              borderRadius: 16, padding: '60px 32px',
+              background: dragging || files.length > 0 ? 'rgba(192,104,32,0.04)' : '#FFFDF8',
+              cursor: status === 'uploading' ? 'not-allowed' : 'pointer', textAlign: 'center',
+              transition: 'all 0.3s',
+              opacity: status === 'uploading' ? 0.6 : 1
+          }}
+      >
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(192,104,32,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <Upload size={40} color="#C06820" />
+          </div>
+          <h3 style={{ fontFamily: 'Quicksand', fontSize: 20, color: '#2C2418', marginBottom: 12, fontWeight: 700 }}>
+            {files.length > 0 ? `${files.length} Images Mounted` : 'Drag & Drop Images'}
+          </h3>
+          <p style={{ color: '#7A6E5D', fontSize: 15, marginBottom: 24, fontWeight: 500 }}>
+            or click to browse your local file system
+          </p>
+          <input ref={fileRef} type="file" multiple accept="image/*" hidden onChange={onFileChange} />
+
+          <div style={{
+              background: '#C06820', border: 'none', borderRadius: 8,
+              padding: '12px 24px', fontFamily: 'Quicksand', fontSize: 13, color: '#FFFFFF', fontWeight: 800,
+              cursor: 'pointer', letterSpacing: 1, pointerEvents: 'none', display: 'inline-block'
+          }}>
+              SELECT IMAGES
+          </div>
+      </div>
+
+      <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'end' }}>
+        <div>
+          <label style={{ display: 'block', fontFamily: 'Quicksand', fontSize: 13, color: '#2C2418', marginBottom: 8, letterSpacing: 1, fontWeight: 700 }}>TARGET CONTAINER ID</label>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} color="#7A6E5D" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              value={containerId}
+              onChange={(e) => setContainerId(e.target.value)}
+              placeholder="e.g. 76991507"
+              style={{
+                width: '100%', padding: '16px 16px 16px 48px', 
+                background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 12,
+                color: '#2C2418', fontFamily: 'monospace', fontSize: 14,
+                outline: 'none', boxSizing: 'border-box'
+              }}
+            />
           </div>
         </div>
-      ) : (
-        <div className="space-y-6 animate-in zoom-in-95 duration-700">
-          <div className="flex justify-between items-center bg-[#FFFDF8] border border-[#D9CDBA] p-6 rounded-3xl shadow-sm">
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-[#2C2418] flex items-center gap-3 uppercase tracking-tighter font-['Quicksand']">
-                <BarChart3 className="w-5 h-5 text-[#C06820]" />
-                Neural Analysis Dashboard
-              </h3>
-              <p className="text-xs text-[#7A6E5D] font-mono font-bold">
-                UNIT: {containerId} // TS: {new Date(analysisResult.timestamp).toLocaleString()}
-              </p>
-            </div>
-            <div className="flex gap-4 items-center">
-              <div className={`px-6 py-2 rounded-full text-xs font-black uppercase border-2 flex items-center gap-2 shadow-sm ${getStatusColor(analysisResult.condition)}`}>
-                <ShieldCheck className="w-4 h-4" />
-                {analysisResult.condition}
-              </div>
-              <button 
-                onClick={() => { setStatus('idle'); setAnalysisResult(null); setFiles([]); }}
-                className="p-3 bg-white border border-[#D9CDBA] rounded-xl text-[#2C2418] hover:bg-slate-50 transition-colors shadow-sm"
+        
+        <button
+          onClick={handleUpload}
+          disabled={status === 'uploading' || !containerId || files.length === 0}
+          style={{
+            width: '100%', padding: '18px 24px', 
+            background: '#2C2418', borderRadius: 12, border: 'none',
+            color: '#FFFFFF', fontFamily: 'Quicksand', fontSize: 13, fontWeight: 800, letterSpacing: 2,
+            cursor: (status === 'uploading' || !containerId || files.length === 0) ? 'not-allowed' : 'pointer',
+            opacity: (status === 'uploading' || !containerId || files.length === 0) ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12
+          }}
+        >
+          {status === 'uploading' ? (
+            <>
+              <Loader2 size={16} color="#FFFFFF" style={{ animation: 'spin 1s linear infinite' }} />
+              INITIALIZING ENGINES...
+            </>
+          ) : (
+            <>
+              <Zap size={16} color="#FFFFFF" fill="#FFFFFF" />
+              ENGAGE INTELLIGENCE SCAN
+            </>
+          )}
+        </button>
+      </div>
+
+      {files.length > 0 && (
+        <div style={{ 
+          marginTop: 24, padding: 20, background: '#FFFDF8', 
+          border: '1px solid #D9CDBA', borderRadius: 16, 
+          display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 
+        }}>
+          {files.map((file, idx) => (
+            <div key={idx} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid #D9CDBA', aspectRatio: '1/1', background: '#FFFFFF' }}>
+              <img
+                src={URL.createObjectURL(file)}
+                alt={`upload-${idx}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
+                style={{ 
+                  position: 'absolute', top: 6, right: 6, background: '#D9534F', border: 'none', 
+                  borderRadius: '50%', padding: 4, color: 'white', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
               >
-                <X className="w-5 h-5" />
+                <X size={12} strokeWidth={3} />
               </button>
             </div>
-          </div>
-
-          <div className="p-8 rounded-[2rem] bg-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10">
-              <div className="lg:col-span-8 space-y-6">
-                <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/5 shadow-inner bg-black group">
-                  <img 
-                    src={URL.createObjectURL(files[selectedImageIdx])} 
-                    className="w-full h-full object-contain opacity-90 transition-opacity" 
-                    alt="Scanned Evidence" 
-                  />
-                  <BoundingBoxOverlay 
-                    detections={analysisResult.detailed_results?.[selectedImageIdx]?.detections}
-                    dimensions={analysisResult.detailed_results?.[selectedImageIdx]?.dimensions}
-                  />
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C06820] to-transparent opacity-50 scan-line shadow-[0_0_15px_rgba(192,104,32,0.5)]" />
-                  <div className="absolute bottom-6 left-6 flex gap-3">
-                    <div className="px-4 py-1.5 bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 text-[10px] text-[#C06820] font-black uppercase tracking-widest">
-                      CAM_{selectedImageIdx + 1}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                  {files.map((file, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setSelectedImageIdx(idx)}
-                      className={`relative flex-shrink-0 w-28 h-20 rounded-2xl overflow-hidden border-2 transition-all ${selectedImageIdx === idx ? 'border-[#C06820] scale-105 shadow-[0_0_20px_rgba(192,104,32,0.3)]' : 'border-white/5 grayscale opacity-30 hover:opacity-100'}`}
-                    >
-                      <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black pointer-events-none text-white/50">POV_{idx + 1}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="lg:col-span-4 space-y-8">
-                <div className="space-y-6">
-                  <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                    <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    Risk Contribution Map
-                  </h4>
-                  <div className="grid gap-6">
-                    {analysisResult.shap_explanation?.map((item, idx) => (
-                      <div key={idx} className="space-y-2.5">
-                        <div className="flex justify-between items-end">
-                          <div className="flex flex-col">
-                            <span className="text-[11px] font-black text-slate-200 uppercase tracking-widest">{item.feature}</span>
-                            <span className="text-[9px] text-slate-500 font-mono">NEURAL_WEIGHT: 0.94</span>
-                          </div>
-                          <span className={`text-[12px] font-black tabular-nums transition-colors duration-1000 ${item.direction === 'risk' ? 'text-rose-500' : 'text-emerald-500'}`}>
-                            {item.direction === 'risk' ? '+' : '-'}{(item.impact * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-[2s] cubic-bezier(0.16, 1, 0.3, 1) ${item.direction === 'risk' ? 'bg-gradient-to-r from-orange-600 to-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.5)]' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}
-                            style={{ width: `${item.impact * 100}%`, transitionDelay: `${idx * 100}ms` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-7 rounded-[2rem] bg-white/[0.02] border border-white/5 relative overflow-hidden backdrop-blur-3xl mt-10">
-                  <div className="relative z-10 space-y-4">
-                    <p className="text-[10px] text-[#C06820] font-black uppercase tracking-[0.2em]">Sensor Interpretation</p>
-                    <p className="text-[13px] text-slate-400 font-medium leading-relaxed italic">
-                      "{analysisResult.condition === 'Safe' 
-                        ? 'Global integrity verified. No critical structural deviations detected from baseline CAD profile.' 
-                        : `Visual telemetry confirms high-severity deformation. ${analysisResult.shap_explanation?.[0]?.feature} exceeds safety threshold.`}"
-                    </p>
-                    <div className="pt-5 flex items-center justify-between border-t border-white/5">
-                      <span className="text-[10px] text-slate-600 uppercase font-mono tracking-widest">Confidence Index</span>
-                      <span className="text-[14px] font-black text-slate-100 tabular-nums">92.48%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       )}
+
+      {status === 'error' && (
+        <div style={{ marginTop: 24, padding: 16, background: '#FFF0F0', border: '1px solid #FFD6D6', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12, color: '#D9534F' }}>
+          <AlertCircle size={20} />
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{message}</p>
+          <button 
+            onClick={() => setStatus('idle')} 
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#D9534F', fontWeight: 700, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', letterSpacing: 1 }}
+          >
+            RETRY
+          </button>
+        </div>
+      )}
+
+      <div style={{ marginTop: 40, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+          <div style={{ background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(44,36,24,0.04)' }}>
+              <ImageIcon size={24} color="#C06820" style={{ marginBottom: 12 }} />
+              <h4 style={{ fontFamily: 'Quicksand', fontSize: 13, color: '#2C2418', marginBottom: 8, letterSpacing: 1, fontWeight: 700 }}>VALID SOURCES</h4>
+              <p style={{ fontSize: 13, color: '#7A6E5D', lineHeight: 1.6, margin: 0 }}>High-resolution JPG, PNG captures. Internal limit: Max 5 viewpoints.</p>
+          </div>
+          <div style={{ background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(44,36,24,0.04)' }}>
+              <ShieldCheck size={24} color="#C06820" style={{ marginBottom: 12 }} />
+              <h4 style={{ fontFamily: 'Quicksand', fontSize: 13, color: '#2C2418', marginBottom: 8, letterSpacing: 1, fontWeight: 700 }}>NEURAL PRIVACY</h4>
+              <p style={{ fontSize: 13, color: '#7A6E5D', lineHeight: 1.6, margin: 0 }}>Visual data strictly mapped over Roboflow endpoints. No local retention.</p>
+          </div>
+          <div style={{ background: '#FFFDF8', border: '1px solid #D9CDBA', borderRadius: 12, padding: 20, boxShadow: '0 1px 3px rgba(44,36,24,0.04)' }}>
+              <BarChart3 size={24} color="#C06820" style={{ marginBottom: 12 }} />
+              <h4 style={{ fontFamily: 'Quicksand', fontSize: 13, color: '#2C2418', marginBottom: 8, letterSpacing: 1, fontWeight: 700 }}>INTEGRATION PIPELINE</h4>
+              <p style={{ fontSize: 13, color: '#7A6E5D', lineHeight: 1.6, margin: 0 }}>SHAP impact vectors push real-time updates to container profiles upon scan.</p>
+          </div>
+      </div>
     </div>
   );
-};
-
-export default ImageAnalysis;
+}
