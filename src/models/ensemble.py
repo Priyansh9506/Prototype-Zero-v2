@@ -113,6 +113,7 @@ class EnsembleRiskScorer:
             "median_risk_score": round(results["Risk_Score"].median(), 2),
             "max_risk_score": round(results["Risk_Score"].max(), 2),
             "min_risk_score": round(results["Risk_Score"].min(), 2),
+            "avg_dwell": round(df_raw["Dwell_Time_Hours"].mean() if "Dwell_Time_Hours" in df_raw else 0, 2),
             "high_risk_containers": int((results["Risk_Score"] >= 70).sum()),
             "medium_risk_containers": int(((results["Risk_Score"] >= 40) & (results["Risk_Score"] < 70)).sum()),
             "low_risk_containers": int((results["Risk_Score"] < 40).sum()),

@@ -45,7 +45,17 @@ export function computeMockRisk(row) {
   const reasonText = reasons.length ? reasons.slice(0, 3).join(', ') : 'normal trade pattern';
   const explanation = `${icons[level]} ${level} (score=${score.toFixed(3)}) | Drivers: ${reasonText}. Weight Δ=${discPct.toFixed(1)}%, value/kg=${vpk.toFixed(2)}.${anomaly ? ' Isolation Forest flagged as statistical anomaly.' : ''}`;
 
-  return { ...row, Risk_Score: parseFloat(score.toFixed(4)), Risk_Level: level, Anomaly_Flag: anomaly, Explanation_Summary: explanation };
+  return { 
+    ...row, 
+    Declared_Weight: dw,
+    Measured_Weight: mw,
+    Declared_Value: dv,
+    Dwell_Time_Hours: dt,
+    Risk_Score: parseFloat(score.toFixed(4)), 
+    Risk_Level: level, 
+    Anomaly_Flag: anomaly, 
+    Explanation_Summary: explanation 
+  };
 }
 
 export function getRiskColor(level) {

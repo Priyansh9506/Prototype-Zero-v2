@@ -7,6 +7,7 @@ import sys
 import os
 import json
 import time
+import datetime
 from pathlib import Path
 
 # Add project root to path
@@ -152,7 +153,7 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
             "declared_value": float(df_raw["Declared_Value"].iloc[i]),
             "declared_weight": float(df_raw["Declared_Weight"].iloc[i]),
             "measured_weight": float(df_raw["Measured_Weight"].iloc[i]),
-            "dwell_time": float(df_raw["Dwell_Time_Hours"].iloc[i]),
+            "dwell_time_hours": float(df_raw["Dwell_Time_Hours"].iloc[i]) if pd.notnull(df_raw["Dwell_Time_Hours"].iloc[i]) else 0.0,
             "shipping_line": str(df_raw["Shipping_Line"].iloc[i]),
             "trade_regime": str(df_raw["Trade_Regime (Import / Export / Transit)"].iloc[i]),
             "importer_id": str(df_raw["Importer_ID"].iloc[i]),
@@ -187,9 +188,17 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     critical_mask = results["Risk_Level"] == "Critical"
     dashboard_data["summary"]["top_critical_containers"] = output_csv[critical_mask].nlargest(20, "Risk_Score").to_dict(orient="records")
     
+    # Convert to JSON with NaN handling
+    def json_serialize(obj):
+        if isinstance(obj, (np.integer, np.floating)):
+            return float(obj) if np.isfinite(obj) else 0.0
+        if isinstance(obj, (pd.Timestamp, datetime.date)):
+            return obj.isoformat()
+        return str(obj)
+
     json_path = os.path.join(output_dir, "dashboard_data.json")
     with open(json_path, "w") as f:
-        json.dump(dashboard_data, f, indent=2, default=str)
+        json.dump(dashboard_data, f, indent=2, default=json_serialize)
     logger.info(f"   ✅ Dashboard JSON: {json_path}")
     
     # ---- Summary ----

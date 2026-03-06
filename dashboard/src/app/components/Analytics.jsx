@@ -244,7 +244,7 @@ export default function Analytics({ data }) {
             
             // Stats
             sumScore += risk;
-            sumDwell += (d.Dwell_Time_Hours || 0);
+            sumDwell += Number(d.Dwell_Time_Hours) || 0;
             if (d.Anomaly_Flag) anomalyCount++;
             if (level === 'Critical') critCount++;
             
@@ -260,7 +260,7 @@ export default function Analytics({ data }) {
             // Weight (to be sampled later)
             const decl = Number(d.Declared_Weight) || 1;
             const meas = Number(d.Measured_Weight) || 0;
-            const disc = ((meas - decl) / decl * 100);
+            const disc = decl > 0 ? ((meas - decl) / decl * 100) : 0;
             sumAbsDisc += Math.abs(disc);
             weights.push({
                 id: d.Container_ID, riskScore: risk,

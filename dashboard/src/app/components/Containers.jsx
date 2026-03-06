@@ -46,7 +46,7 @@ export default function Containers({ data }) {
         const rows = data.map(r => Object.values(r).join(','));
         const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'risk_export.csv'; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = `Risk_Predictions_Export_${new Date().toISOString().split('T')[0]}.csv`; a.click();
     };
 
     const filtered = useMemo(() => {

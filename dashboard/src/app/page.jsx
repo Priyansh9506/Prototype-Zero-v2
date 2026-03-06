@@ -108,24 +108,32 @@ export default function App() {
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
 
   // Normalize API snake_case keys to PascalCase expected by components
-  const normalizeRow = (row) => ({
-    Container_ID: row.container_id ?? row.Container_ID,
-    Risk_Score: row.risk_score ?? row.Risk_Score ?? 0,
-    Risk_Level: row.risk_level ?? row.Risk_Level ?? 'Low Risk',
-    Anomaly_Flag: row.anomaly_flag ?? row.Anomaly_Flag ?? 0,
-    Declared_Value: row.declared_value ?? row.Declared_Value ?? 0,
-    Declared_Weight: row.declared_weight ?? row.Declared_Weight ?? 0,
-    Measured_Weight: row.measured_weight ?? row.Measured_Weight ?? 0,
-    Dwell_Time_Hours: row.dwell_time_hours ?? row.Dwell_Time_Hours ?? 0,
-    Origin_Country: row.origin_country ?? row.Origin_Country ?? '',
-    Destination_Country: row.destination_country ?? row.Destination_Country ?? '',
-    HS_Code: row.hs_code ?? row.HS_Code ?? '',
-    Trade_Regime: row.trade_regime ?? row.Trade_Regime ?? '',
-    Shipping_Line: row.shipping_line ?? row.Shipping_Line ?? '',
-    Declaration_Date: row.declaration_date ?? row.Declaration_Date ?? '',
-    Declaration_Time: row.declaration_time ?? row.Declaration_Time ?? '',
-    Explanation_Summary: row.explanation_summary ?? row.Explanation_Summary ?? '',
-  });
+  const normalizeRow = (row) => {
+    const getNum = (val) => {
+      if (val === null || val === undefined || val === 'nan' || val === 'NaN') return 0;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    return {
+      Container_ID: row.container_id ?? row.Container_ID,
+      Risk_Score: getNum(row.risk_score ?? row.Risk_Score),
+      Risk_Level: row.risk_level ?? row.Risk_Level ?? 'Low Risk',
+      Anomaly_Flag: row.anomaly_flag ?? row.Anomaly_Flag ?? 0,
+      Declared_Value: getNum(row.declared_value ?? row.Declared_Value),
+      Declared_Weight: getNum(row.declared_weight ?? row.Declared_Weight),
+      Measured_Weight: getNum(row.measured_weight ?? row.Measured_Weight),
+      Dwell_Time_Hours: getNum(row.dwell_time_hours ?? row.Dwell_Time_Hours),
+      Origin_Country: row.origin_country ?? row.Origin_Country ?? '',
+      Destination_Country: row.destination_country ?? row.Destination_Country ?? '',
+      HS_Code: row.hs_code ?? row.HS_Code ?? '',
+      Trade_Regime: row.trade_regime ?? row.Trade_Regime ?? '',
+      Shipping_Line: row.shipping_line ?? row.Shipping_Line ?? '',
+      Declaration_Date: row.declaration_date ?? row.Declaration_Date ?? '',
+      Declaration_Time: row.declaration_time ?? row.Declaration_Time ?? '',
+      Explanation_Summary: row.explanation_summary ?? row.Explanation_Summary ?? '',
+    };
+  };
 
   // ── Authentication & Data Initialization ──
   useEffect(() => {
@@ -144,7 +152,8 @@ export default function App() {
         // Try to load persisted uploaded data from localStorage first
         const cached = loadDataFromStorage();
         if (cached && cached.length > 0) {
-          setData(cached);
+          const normalized = cached.map(normalizeRow);
+          setData(normalized);
           return; // We have local data, no need to fetch from backend
         }
 
@@ -181,7 +190,9 @@ export default function App() {
     // Try to load persisted data from localStorage
     const cached = loadDataFromStorage();
     if (cached && cached.length > 0) {
-      setData(cached);
+      const normalized = cached.map(normalizeRow);
+      setData(normalized);
+      setLoading(false);
       return;
     }
 
@@ -229,8 +240,9 @@ export default function App() {
           if (idx < rows.length) requestAnimationFrame(process);
           else {
             setTimeout(() => {
-              setData(scored);
-              saveDataToStorage(scored); // Persist to localStorage!
+              const cleaned = scored.map(normalizeRow);
+              setData(cleaned);
+              saveDataToStorage(cleaned); // Persist to localStorage!
               setLoading(false);
               setCurrentView('overview'); // redirect to overview on success
             }, 600);
