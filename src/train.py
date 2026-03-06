@@ -20,66 +20,71 @@ from src.models.lgbm_model import LightGBMRiskModel
 from src.models.anomaly import AnomalyDetector
 import joblib
 
+from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("src.train")
+
 
 def main():
     start_time = time.time()
-    print("=" * 60)
-    print("SmartContainer Risk Engine — Training Pipeline")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("SmartContainer Risk Engine — Training Pipeline")
+    logger.info("=" * 60)
     
     # ---- Step 1: Load Data ----
-    print("\n📥 Step 1: Loading Historical Data...")
+    logger.info("📥 Step 1: Loading Historical Data...")
     df = load_historical_data()
     
     # ---- Step 2: Preprocess ----
-    print("\n🔧 Step 2: Preprocessing...")
+    logger.info("🔧 Step 2: Preprocessing...")
     df, encoders = preprocess_training_data(df)
     save_encoders(encoders)
     
     # ---- Step 3: Feature Engineering ----
-    print("\n⚙️ Step 3: Engineering Features...")
+    logger.info("⚙️ Step 3: Engineering Features...")
     df = engineer_features(df)
     
     # Compute and save behavioral stats for inference
     behavioral_stats = compute_behavioral_stats(df)
-    Path("models").mkdir(parents=True, exist_ok=True)
-    joblib.dump(behavioral_stats, "models/behavioral_stats.joblib")
-    print(f"[Train] Behavioral stats saved")
+    settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(behavioral_stats, settings.MODELS_DIR / "behavioral_stats.joblib")
+    logger.info(f"[Train] Behavioral stats saved")
     
     # ---- Step 4: Get Feature Columns ----
     feature_columns = get_feature_columns(df)
-    print(f"\n📋 Feature columns ({len(feature_columns)}): {feature_columns[:10]}...")
+    logger.info(f"📋 Feature columns ({len(feature_columns)}): {feature_columns[:10]}...")
     
     # Save feature columns list
-    joblib.dump(feature_columns, "models/feature_columns.joblib")
+    joblib.dump(feature_columns, settings.MODELS_DIR / "feature_columns.joblib")
     
     y = df["target"]
     
     # ---- Step 5: Train XGBoost ----
-    print("\n🌲 Step 5: Training XGBoost...")
+    logger.info("🌲 Step 5: Training XGBoost...")
     xgb_model = XGBoostRiskModel()
     xgb_model.train(df, y, feature_columns)
     xgb_model.save()
     
     # ---- Step 6: Train LightGBM ----
-    print("\n💡 Step 6: Training LightGBM...")
+    logger.info("💡 Step 6: Training LightGBM...")
     lgbm_model = LightGBMRiskModel()
     lgbm_model.train(df, y, feature_columns)
     lgbm_model.save()
     
     # ---- Step 7: Train Anomaly Detector ----
-    print("\n🔍 Step 7: Training Anomaly Detector...")
+    logger.info("🔍 Step 7: Training Anomaly Detector...")
     anomaly_detector = AnomalyDetector()
     anomaly_detector.fit(df)
     anomaly_detector.save()
     
     # ---- Summary ----
     elapsed = time.time() - start_time
-    print("\n" + "=" * 60)
-    print(f"✅ Training Complete in {elapsed:.1f}s")
-    print(f"   Models saved to ./models/")
-    print(f"   Features: {len(feature_columns)}")
-    print(f"   Training samples: {len(df)}")
+    logger.info("=" * 60)
+    logger.info(f"✅ Training Complete in {elapsed:.1f}s")
+    logger.info(f"   Models saved to {settings.MODELS_DIR}/")
+    logger.info(f"   Features: {len(feature_columns)}")
+    logger.info(f"   Training samples: {len(df)}")
     
     # Save training metadata
     metadata = {
@@ -94,10 +99,10 @@ def main():
         "training_time_seconds": round(elapsed, 1),
     }
     
-    with open("models/training_metadata.json", "w") as f:
+    with open(settings.MODELS_DIR / "training_metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
     
-    print("=" * 60)
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

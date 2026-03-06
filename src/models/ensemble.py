@@ -6,6 +6,11 @@ Combines XGBoost, LightGBM, and Anomaly Detection into final risk scores.
 import numpy as np
 import pandas as pd
 
+from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("src.models.ensemble")
+
 
 class EnsembleRiskScorer:
     """
@@ -25,7 +30,9 @@ class EnsembleRiskScorer:
     CRITICAL_THRESHOLD = 55  # Score above this = Critical
     
     def __init__(self):
-        pass
+        self.XGBOOST_WEIGHT = settings.XGB_WEIGHT
+        self.LGBM_WEIGHT = settings.LGBM_WEIGHT
+        self.ANOMALY_WEIGHT = settings.ANOMALY_WEIGHT
     
     def compute_risk_scores(
         self,
@@ -90,10 +97,8 @@ class EnsembleRiskScorer:
         # Summary stats
         critical_count = (risk_levels == "Critical").sum()
         low_risk_count = (risk_levels == "Low Risk").sum()
-        print(f"[Ensemble] Risk distribution — Critical: {critical_count} ({critical_count/n*100:.1f}%), "
-              f"Low Risk: {low_risk_count} ({low_risk_count/n*100:.1f}%)")
-        print(f"[Ensemble] Risk score stats — Mean: {ensemble_risk.mean():.2f}, "
-              f"Median: {np.median(ensemble_risk):.2f}, Max: {ensemble_risk.max():.2f}")
+        logger.info(f"Risk distribution — Critical: {critical_count} ({critical_count/n*100:.1f}%), Low Risk: {low_risk_count} ({low_risk_count/n*100:.1f}%)")
+        logger.info(f"Risk score stats — Mean: {ensemble_risk.mean():.2f}, Median: {np.median(ensemble_risk):.2f}, Max: {ensemble_risk.max():.2f}")
         
         return results
     

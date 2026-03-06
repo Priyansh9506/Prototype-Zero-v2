@@ -16,6 +16,11 @@ import pandas as pd
 import numpy as np
 import joblib
 
+from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("src.pipeline")
+
 from src.data.loader import load_realtime_data
 from src.data.preprocessor import preprocess_inference_data, load_encoders
 from src.features.engineering import engineer_features, get_feature_columns
@@ -30,14 +35,14 @@ from src.explainability.rule_explainer import generate_explanations
 def run_inference(data_path: str = None, output_dir: str = "output"):
     """Run full inference pipeline on real-time data."""
     start_time = time.time()
-    print("=" * 60)
-    print("SmartContainer Risk Engine — Inference Pipeline")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("SmartContainer Risk Engine — Inference Pipeline")
+    logger.info("=" * 60)
     
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     # ---- Step 1: Load Data ----
-    print("\n📥 Step 1: Loading Data...")
+    logger.info("📥 Step 1: Loading Data...")
     if data_path:
         df_raw = pd.read_csv(data_path)
         from src.data.loader import _normalize_dates, _validate_schema
@@ -49,18 +54,18 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     container_ids = df_raw["Container_ID"].copy()
     
     # ---- Step 2: Preprocess ----
-    print("\n🔧 Step 2: Preprocessing...")
+    logger.info("🔧 Step 2: Preprocessing...")
     encoders = load_encoders()
     df = preprocess_inference_data(df_raw, encoders)
     
     # ---- Step 3: Feature Engineering ----
-    print("\n⚙️ Step 3: Engineering Features...")
-    behavioral_stats = joblib.load("models/behavioral_stats.joblib")
+    logger.info("⚙️ Step 3: Engineering Features...")
+    behavioral_stats = joblib.load(settings.MODELS_DIR / "behavioral_stats.joblib")
     df = engineer_features(df, historical_stats=behavioral_stats)
     
     # ---- Step 4: Load Models ----
-    print("\n📦 Step 4: Loading Models...")
-    feature_columns = joblib.load("models/feature_columns.joblib")
+    logger.info("📦 Step 4: Loading Models...")
+    feature_columns = joblib.load(settings.MODELS_DIR / "feature_columns.joblib")
     
     # Ensure all feature columns exist (fill missing with 0)
     for col in feature_columns:
@@ -77,7 +82,7 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     anomaly_detector.load()
     
     # ---- Step 5: Predict ----
-    print("\n🎯 Step 5: Generating Predictions...")
+    logger.info("🎯 Step 5: Generating Predictions...")
     xgb_proba = xgb_model.predict_proba(df)
     lgbm_proba = lgbm_model.predict_proba(df)
     anomaly_scores = anomaly_detector.compute_anomaly_score(df)
@@ -88,7 +93,7 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     results = ensemble.compute_risk_scores(xgb_proba, lgbm_proba, anomaly_scores)
     
     # ---- Step 6: Explainability ----
-    print("\n💡 Step 6: Generating Explanations...")
+    logger.info("💡 Step 6: Generating Explanations...")
     # SHAP explanations (using XGBoost model)
     shap_explainer = ShapExplainer()
     shap_results = shap_explainer.explain(xgb_model.model, df, feature_columns)
@@ -101,7 +106,7 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     )
     
     # ---- Step 7: Output ----
-    print("\n📤 Step 7: Generating Output Files...")
+    logger.info("📤 Step 7: Generating Output Files...")
     
     # Prediction CSV (required output format)
     output_csv = pd.DataFrame({
@@ -112,7 +117,7 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     })
     csv_path = os.path.join(output_dir, "predictions.csv")
     output_csv.to_csv(csv_path, index=False)
-    print(f"   ✅ Predictions CSV: {csv_path}")
+    logger.info(f"   ✅ Predictions CSV: {csv_path}")
     
     # Detailed JSON for dashboard
     dashboard_data = {
@@ -185,18 +190,18 @@ def run_inference(data_path: str = None, output_dir: str = "output"):
     json_path = os.path.join(output_dir, "dashboard_data.json")
     with open(json_path, "w") as f:
         json.dump(dashboard_data, f, indent=2, default=str)
-    print(f"   ✅ Dashboard JSON: {json_path}")
+    logger.info(f"   ✅ Dashboard JSON: {json_path}")
     
     # ---- Summary ----
     elapsed = time.time() - start_time
     summary = ensemble.get_risk_summary(results)
-    print(f"\n{'=' * 60}")
-    print(f"✅ Inference Complete in {elapsed:.1f}s")
-    print(f"   Total Containers: {summary['total_containers']}")
-    print(f"   Critical: {summary['critical_count']} ({summary['critical_percentage']}%)")
-    print(f"   Low Risk: {summary['low_risk_count']}")
-    print(f"   Avg Risk Score: {summary['avg_risk_score']}")
-    print(f"{'=' * 60}")
+    logger.info(f"{'=' * 60}")
+    logger.info(f"✅ Inference Complete in {elapsed:.1f}s")
+    logger.info(f"   Total Containers: {summary['total_containers']}")
+    logger.info(f"   Critical: {summary['critical_count']} ({summary['critical_percentage']}%)")
+    logger.info(f"   Low Risk: {summary['low_risk_count']}")
+    logger.info(f"   Avg Risk Score: {summary['avg_risk_score']}")
+    logger.info(f"{'=' * 60}")
     
     return output_csv, dashboard_data
 

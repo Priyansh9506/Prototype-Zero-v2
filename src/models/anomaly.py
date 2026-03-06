@@ -9,6 +9,11 @@ from sklearn.ensemble import IsolationForest
 import joblib
 from pathlib import Path
 
+from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("src.models.anomaly")
+
 
 class AnomalyDetector:
     def __init__(self):
@@ -32,7 +37,7 @@ class AnomalyDetector:
             n_jobs=-1,
         )
         self.isolation_forest.fit(X_anomaly)
-        print(f"[Anomaly] Isolation Forest fitted on {X_anomaly.shape[0]} samples")
+        logger.info(f"Isolation Forest fitted on {X_anomaly.shape[0]} samples")
         return self
     
     def compute_anomaly_score(self, df: pd.DataFrame) -> pd.Series:
@@ -63,8 +68,7 @@ class AnomalyDetector:
         # Normalize to 0-1
         composite = composite.clip(0, 1)
         
-        print(f"[Anomaly] Computed anomaly scores — mean: {composite.mean():.4f}, "
-              f"anomalies (>0.5): {(composite > 0.5).sum()}")
+        logger.info(f"Computed anomaly scores — mean: {composite.mean():.4f}, anomalies (>0.5): {(composite > 0.5).sum()}")
         
         return composite
     
@@ -158,16 +162,20 @@ class AnomalyDetector:
         
         return flags
     
-    def save(self, path: str = "models/anomaly_detector.joblib"):
+    def save(self, path: str = None):
         """Save the anomaly detector."""
+        if path is None:
+            path = settings.MODELS_DIR / "anomaly_detector.joblib"
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         joblib.dump({"isolation_forest": self.isolation_forest, "features": self.anomaly_features}, path)
-        print(f"[Anomaly] Detector saved to {path}")
+        logger.info(f"Detector saved to {path}")
     
-    def load(self, path: str = "models/anomaly_detector.joblib"):
+    def load(self, path: str = None):
         """Load the anomaly detector."""
+        if path is None:
+            path = settings.MODELS_DIR / "anomaly_detector.joblib"
         data = joblib.load(path)
         self.isolation_forest = data["isolation_forest"]
         self.anomaly_features = data["features"]
-        print(f"[Anomaly] Detector loaded from {path}")
+        logger.info(f"Detector loaded from {path}")
         return self

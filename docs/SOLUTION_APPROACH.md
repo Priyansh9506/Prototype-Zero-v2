@@ -107,7 +107,7 @@ Hybrid approach combining three methods:
 | **SHAP explainability**      | Not just predictions but WHY — mandatory per problem statement      |
 | **Full-stack dashboard**     | Next.js with glassmorphism UI, interactive charts, drill-down       |
 | **REST API**                 | FastAPI with pagination, filtering, CSV upload → live prediction    |
-| **Deployment-ready**         | Vercel + Railway, modular structure, Docker-compatible              |
+| **Deployment-ready**         | Vercel + Railway, modular structure                                 |
 
 ---
 

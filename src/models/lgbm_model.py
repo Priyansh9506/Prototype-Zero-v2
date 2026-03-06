@@ -11,6 +11,11 @@ from sklearn.metrics import f1_score
 import joblib
 from pathlib import Path
 
+from src.config import settings
+from src.logger import setup_logger
+
+logger = setup_logger("src.models.lgbm")
+
 
 class LightGBMRiskModel:
     def __init__(self):
@@ -46,7 +51,7 @@ class LightGBMRiskModel:
         # Cross-validation
         self._cross_validate(X_train, y)
         
-        print(f"[LightGBM] Model trained on {X_train.shape[0]} samples, {X_train.shape[1]} features")
+        logger.info(f"Model trained on {X_train.shape[0]} samples, {X_train.shape[1]} features")
         return self
     
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
@@ -74,7 +79,7 @@ class LightGBMRiskModel:
             f1 = f1_score(y_val, y_pred, average="weighted")
             f1_scores.append(f1)
         
-        print(f"[LightGBM] 3-Fold CV Weighted F1: {np.mean(f1_scores):.4f} (+/- {np.std(f1_scores):.4f})")
+        logger.info(f"3-Fold CV Weighted F1: {np.mean(f1_scores):.4f} (+/- {np.std(f1_scores):.4f})")
     
     def feature_importance(self) -> dict:
         """Return feature importance dict."""
@@ -83,16 +88,20 @@ class LightGBMRiskModel:
         importance = self.model.feature_importances_
         return dict(zip(self.feature_columns, importance))
     
-    def save(self, path: str = "models/lgbm_model.joblib"):
+    def save(self, path: str = None):
         """Save model to disk."""
+        if path is None:
+            path = settings.MODELS_DIR / "lgbm_model.joblib"
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         joblib.dump({"model": self.model, "feature_columns": self.feature_columns}, path)
-        print(f"[LightGBM] Model saved to {path}")
+        logger.info(f"Model saved to {path}")
     
-    def load(self, path: str = "models/lgbm_model.joblib"):
+    def load(self, path: str = None):
         """Load model from disk."""
+        if path is None:
+            path = settings.MODELS_DIR / "lgbm_model.joblib"
         data = joblib.load(path)
         self.model = data["model"]
         self.feature_columns = data["feature_columns"]
-        print(f"[LightGBM] Model loaded from {path}")
+        logger.info(f"Model loaded from {path}")
         return self

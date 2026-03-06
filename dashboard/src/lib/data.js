@@ -1,8 +1,8 @@
 /**
- * Data loading utility — reads pre-computed dashboard_data.json
- * In production, this would call the FastAPI backend.
- * For demo, we load from the static output file.
+ * Data loading utility — reads from FastAPI backend with auth.
  */
+
+import { apiFetch } from './api';
 
 let cachedData = null;
 
@@ -10,13 +10,12 @@ export async function loadDashboardData() {
   if (cachedData) return cachedData;
 
   try {
-    // Try API first
-    const res = await fetch('http://localhost:8000/stats');
+    const res = await apiFetch('/stats');
     if (res.ok) {
       const statsData = await res.json();
-      const resultsRes = await fetch('http://localhost:8000/results?page_size=500');
+      const resultsRes = await apiFetch('/results?page_size=500');
       const resultsData = await resultsRes.json();
-      
+
       cachedData = {
         summary: statsData.summary,
         risk_distribution: statsData.risk_distribution,
@@ -28,7 +27,7 @@ export async function loadDashboardData() {
       return cachedData;
     }
   } catch {
-    // API not available, load from static file
+    // API not available or auth failed, load from static file
   }
 
   // Fallback: load from static JSON

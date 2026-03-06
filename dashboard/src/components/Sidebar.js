@@ -1,11 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Container, Upload, BarChart3, Shield, Activity } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, Container, Upload, BarChart3, Shield, Activity, LogOut, UserCircle } from 'lucide-react';
+import { clearToken, isAuthenticated } from '@/lib/api';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Don't render sidebar on login page
+  if (pathname === '/login') return null;
 
   const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -13,6 +18,11 @@ export default function Sidebar() {
     { href: '/upload', label: 'Upload & Predict', icon: Upload },
     { href: '/analytics', label: 'Analytics', icon: BarChart3 },
   ];
+
+  const handleLogout = () => {
+    clearToken();
+    router.push('/login');
+  };
 
   return (
     <aside className="sidebar">
@@ -22,7 +32,7 @@ export default function Sidebar() {
         </div>
         <div>
           <h1>SmartContainer</h1>
-          <span>Risk Engine v1.0</span>
+          <span>Risk Engine v3.0</span>
         </div>
       </div>
 
@@ -51,6 +61,14 @@ export default function Sidebar() {
             <Activity size={18} />
             <span style={{ fontSize: 12 }}>API: <span style={{ color: 'var(--accent-emerald)' }}>● Connected</span></span>
           </div>
+          <button
+            onClick={handleLogout}
+            className="nav-link"
+            style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: 'var(--text-secondary)', fontSize: 14 }}
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
         </div>
       </nav>
     </aside>

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertTriangle, Download } from 'lucide-react';
 import { clearCache } from '@/lib/data';
+import { apiFetch } from '@/lib/api';
 
 export default function UploadPage() {
   const [file, setFile] = useState(null);
@@ -30,7 +31,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('http://localhost:8000/predict', {
+      const res = await apiFetch('/predict', {
         method: 'POST',
         body: formData,
       });
