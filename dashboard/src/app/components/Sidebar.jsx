@@ -1,13 +1,26 @@
 import React from 'react';
-import { Anchor, LayoutDashboard, Database, List, Settings, LogOut, BarChart3, User } from 'lucide-react';
+import { 
+  Anchor, 
+  LayoutDashboard,
+  Package,
+  BarChart3,
+  Upload,
+  Settings,
+  UserCircle,
+  LogOut,
+  ChevronRight,
+  Shield,
+  ImageIcon
+} from 'lucide-react';
 
 export default function Sidebar({ currentView, setView, onLogout, userId }) {
     const menuItems = [
         { id: 'overview', label: 'OVERVIEW', icon: <LayoutDashboard size={18} /> },
-        { id: 'containers', label: 'CONTAINERS', icon: <List size={18} /> },
+        { id: 'containers', label: 'CONTAINERS', icon: <Package size={18} /> },
         { id: 'analytics', label: 'ANALYTICS', icon: <BarChart3 size={18} /> },
-        { id: 'upload', label: 'DATA UPLOAD', icon: <Database size={18} /> },
-        ...(userId?.role === 'admin' ? [{ id: 'admin', label: 'ADMIN', icon: <User size={18} /> }] : []),
+        { id: 'upload', label: 'DATA UPLOAD', icon: <Upload size={18} /> },
+        { id: 'imageAnalysis', label: 'IMAGE ANALYSIS', icon: <ImageIcon size={18} /> },
+        ...(userId?.role === 'admin' ? [{ id: 'admin', label: 'ADMIN', icon: <Shield size={18} /> }] : []),
         { id: 'settings', label: 'SETTINGS', icon: <Settings size={18} /> },
     ];
 

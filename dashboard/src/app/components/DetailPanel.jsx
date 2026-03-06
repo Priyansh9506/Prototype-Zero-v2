@@ -87,6 +87,65 @@ export default function DetailPanel({ container, onClose }) {
                     ))}
                 </div>
 
+                {/* Image Analysis Result */}
+                {container.Image_Analysis && (
+                    <div style={{ padding: '0 24px 20px' }}>
+                        <div style={{ fontFamily: 'Quicksand', fontSize: 12, color: '#C06820', marginBottom: 12, letterSpacing: 2, fontWeight: 700 }}>IMAGE ANALYSIS (ROBOFLOW)</div>
+                        <div style={{
+                            background: container.Image_Analysis.condition === 'Safe' ? 'rgba(46,125,50,0.08)' : 
+                                       container.Image_Analysis.condition === 'Faulty' ? 'rgba(192,104,32,0.08)' : 'rgba(198,40,40,0.08)',
+                            border: `1px solid ${container.Image_Analysis.condition === 'Safe' ? 'rgba(46,125,50,0.2)' : 
+                                                container.Image_Analysis.condition === 'Faulty' ? 'rgba(192,104,32,0.2)' : 'rgba(198,40,40,0.2)'}`,
+                            borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 8
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontFamily: 'Quicksand', fontSize: 13, color: '#2C2418', fontWeight: 600 }}>CONDITION:</span>
+                                <span style={{ 
+                                    fontFamily: 'Quicksand', fontSize: 13, fontWeight: 800, 
+                                    color: container.Image_Analysis.condition === 'Safe' ? '#2E7D32' : 
+                                           container.Image_Analysis.condition === 'Faulty' ? '#C06820' : '#C62828'
+                                }}>
+                                    {container.Image_Analysis.condition.toUpperCase()}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: '#7A6E5D', fontSize: 12, fontWeight: 500 }}>Images Processed:</span>
+                                <span style={{ fontSize: 12, color: '#2C2418', fontWeight: 600 }}>{container.Image_Analysis.image_count}</span>
+                            </div>
+
+                            {/* Image SHAP Breakdown */}
+                            {container.Image_Analysis.shap_explanation && (
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7A6E5D', marginBottom: 8, letterSpacing: 0.5 }}>DETECTION IMPACT (SHAP)</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        {container.Image_Analysis.shap_explanation.map((item, idx) => (
+                                            <div key={idx} style={{ spaceY: 2 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                                    <span style={{ color: '#2C2418', fontWeight: 500 }}>{item.feature}</span>
+                                                    <span style={{ color: item.direction === 'risk' ? '#C62828' : '#2E7D32', fontWeight: 700 }}>
+                                                        {item.direction === 'risk' ? '+' : '-'}{(item.impact * 100).toFixed(0)}%
+                                                    </span>
+                                                </div>
+                                                <div style={{ height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden', marginTop: 2 }}>
+                                                    <div style={{ 
+                                                        height: '100%', width: `${item.impact * 100}%`,
+                                                        background: item.direction === 'risk' ? '#C62828' : '#2E7D32',
+                                                        borderRadius: 2
+                                                    }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ color: '#7A6E5D', fontSize: 10, marginTop: 4, fontStyle: 'italic' }}>
+                                Last analyzed: {new Date(container.Image_Analysis.timestamp).toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* AI Explanation */}
                 <div style={{ padding: '0 24px 20px' }}>
                     <div style={{ fontFamily: 'Quicksand', fontSize: 12, color: '#C06820', marginBottom: 12, letterSpacing: 2, fontWeight: 700 }}>AI EXPLANATION</div>

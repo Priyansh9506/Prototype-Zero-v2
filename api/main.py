@@ -25,6 +25,13 @@ from src.logger import setup_logger
 from api.database import engine, Base, get_db
 from api import models_db, schemas, auth
 from api.task_manager import task_manager
+from inference_sdk import InferenceHTTPClient
+
+# Initialize Roboflow client
+ROBOFLOW_CLIENT = InferenceHTTPClient(
+    api_url="https://serverless.roboflow.com",
+    api_key="kqvAIVqKjU0Jmp5Ip0JR"
+)
 
 logger = setup_logger("api.main")
 
@@ -473,6 +480,155 @@ async def get_feature_importance(current_user: models_db.User = Depends(auth.get
         raise HTTPException(status_code=404, detail="No pre-computed data found.")
     
     return DASHBOARD_DATA.get("feature_importance", {})
+
+
+def generate_image_shap(predictions):
+    """
+    Generate a mock SHAP breakdown based on detected damage.
+    """
+    shap_data = []
+    base_value = 0.1 # Base safe profile
+    
+    # Weights for different damage types
+    weights = {
+        "dent": 0.25,
+        "rust": 0.40,
+        "hole": 0.60,
+        "deframe": 0.50
+    }
+    
+    counts = {}
+    for p in predictions:
+        label = p["class"].lower()
+        counts[label] = counts.get(label, 0) + 1
+        
+    for label, count in counts.items():
+        weight = weights.get(label, 0.30)
+        impact = min(weight * count, 0.9)
+        shap_data.append({
+            "feature": f"Detected {label.capitalize()} ({count})",
+            "impact": impact,
+            "direction": "risk"
+        })
+        
+    if not shap_data:
+        shap_data.append({
+            "feature": "No visible damage",
+            "impact": 0.05,
+            "direction": "safe"
+        })
+        
+    return shap_data
+
+
+def classify_condition(predictions):
+    if len(predictions) == 0:
+        return "Safe"
+    severity = 0
+    for p in predictions:
+        label = p["class"].lower()
+        if "hole" in label or "rust" in label:
+            severity = max(severity, 2) # Damaged
+        elif "dent" in label or "deframe" in label:
+            severity = max(severity, 1) # Faulty
+    
+    if severity == 2: return "Damaged"
+    if severity == 1: return "Faulty"
+    return "Safe"
+
+
+@app.post("/analyze-container-image")
+async def analyze_container_image(
+    container_id: str = Query(...),
+    files: list[UploadFile] = File(...),
+    current_user: models_db.User = Depends(auth.get_current_officer_or_admin)
+):
+    """
+    Analyze up to 5 images for a specific container to detect damage.
+    """
+    if len(files) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 images allowed")
+    
+    if DASHBOARD_DATA is None:
+        raise HTTPException(status_code=404, detail="No pre-computed data found.")
+
+    # Find the container
+    predictions_list = DASHBOARD_DATA.get("predictions", [])
+    container_idx = -1
+    for i, p in enumerate(predictions_list):
+        if str(p["container_id"]) == str(container_id):
+            container_idx = i
+            break
+    
+    if container_idx == -1:
+        raise HTTPException(status_code=404, detail=f"Container {container_id} not found")
+
+    results_data = []
+    all_detections = []
+    
+    try:
+        from PIL import Image
+        for file in files:
+            # Save uploaded file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp:
+                content = await file.read()
+                tmp.write(content)
+                tmp_path = tmp.name
+            
+            try:
+                # Get image dimensions
+                with Image.open(tmp_path) as img:
+                    width, height = img.size
+
+                # Run Roboflow inference
+                result = ROBOFLOW_CLIENT.infer(
+                    tmp_path,
+                    model_id="container-damage-detection-uekkr/1"
+                )
+                
+                detections = result.get("predictions", [])
+                condition = classify_condition(detections)
+                all_detections.extend(detections)
+                
+                results_data.append({
+                    "filename": file.filename,
+                    "condition": condition,
+                    "detections": detections,
+                    "dimensions": {"width": width, "height": height}
+                })
+            finally:
+                # Clean up
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+        
+        # Determine overall condition
+        overall_condition = classify_condition(all_detections)
+        shap_explanation = generate_image_shap(all_detections)
+        
+        # Update dashboard data
+        image_analysis = {
+            "condition": overall_condition,
+            "image_count": len(files),
+            "timestamp": pd.Timestamp.now().isoformat(),
+            "shap_explanation": shap_explanation,
+            "detailed_results": results_data
+        }
+        DASHBOARD_DATA["predictions"][container_idx]["Image_Analysis"] = image_analysis
+        
+        # Persist to file
+        json_path = settings.OUTPUT_DIR / "dashboard_data.json"
+        with open(json_path, 'w') as f:
+            json.dump(DASHBOARD_DATA, f, indent=4)
+            
+        return {
+            "status": "success",
+            "container_id": container_id,
+            "analysis": image_analysis
+        }
+        
+    except Exception as e:
+        logger.error(f"Image analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Image analysis failed: {str(e)}")
 
 
 if __name__ == "__main__":

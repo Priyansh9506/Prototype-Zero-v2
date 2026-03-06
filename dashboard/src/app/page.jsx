@@ -7,6 +7,7 @@ import { computeMockRisk } from './data';
 
 // Components
 import Login from './components/Login';
+import ImageAnalysis from './components/ImageAnalysis';
 import Sidebar from './components/Sidebar';
 import { api } from './api';
 import { removeToken, getToken } from './auth';
@@ -132,6 +133,7 @@ export default function App() {
       Declaration_Date: row.declaration_date ?? row.Declaration_Date ?? '',
       Declaration_Time: row.declaration_time ?? row.Declaration_Time ?? '',
       Explanation_Summary: row.explanation_summary ?? row.Explanation_Summary ?? '',
+      Image_Analysis: row.image_analysis ?? row.Image_Analysis ?? null,
     };
   };
 
@@ -264,6 +266,7 @@ export default function App() {
     case 'containers': ViewComponent = <Containers data={data} />; break;
     case 'analytics': ViewComponent = <Analytics data={data} />; break;
     case 'upload': ViewComponent = <UploadData onFileLoaded={processCSV} />; break;
+    case 'imageAnalysis': ViewComponent = <ImageAnalysis />; break;
     case 'settings': ViewComponent = <Settings threshold={criticalThreshold} onThresholdChange={handleThresholdChange} />; break;
     case 'admin': ViewComponent = <Admin />; break;
     default: ViewComponent = <Overview data={data} />;

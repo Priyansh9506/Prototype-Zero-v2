@@ -16,3 +16,5 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 imbalanced-learn==0.12.4
 optuna==4.0.0
+inference-sdk
+opencv-python-headless
