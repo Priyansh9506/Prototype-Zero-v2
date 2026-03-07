@@ -36,8 +36,11 @@ except ImportError:
 
 logger = setup_logger("api.main")
 
-# Create tables if they don't exist
-Base.metadata.create_all(bind=engine)
+# Create tables if they don't exist — wrapped to prevent startup crash
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"WARNING: Could not create DB tables: {e}")
 
 app = FastAPI(
     title="SmartContainer Risk Engine API",
@@ -80,7 +83,10 @@ def load_precomputed_data():
 
 @app.on_event("startup")
 async def startup_event():
-    load_precomputed_data()
+    try:
+        load_precomputed_data()
+    except Exception as e:
+        print(f"WARNING: Could not load precomputed data: {e}")
 
     # Create testadmin user if not exists
     db = SessionLocal()
