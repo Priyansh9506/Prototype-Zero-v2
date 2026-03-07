@@ -6,10 +6,11 @@
             "providers": [
                 "python"
             ]
-        }
+        },
+        "buildCommand": "pip install -r requirements-deploy.txt"
     },
     "deploy": {
-        "startCommand": "gunicorn api.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120",
+        "startCommand": "uvicorn api.main:app --host 0.0.0.0 --port $PORT",
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 10
     }
