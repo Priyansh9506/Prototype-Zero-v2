@@ -22,21 +22,25 @@ from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.logger import setup_logger
-from api.database import engine, Base, get_db
+from api.database import engine, Base, get_db, SessionLocal
 from api import models_db, schemas, auth
 from api.task_manager import task_manager
-from inference_sdk import InferenceHTTPClient
-
-# Initialize Roboflow client
-ROBOFLOW_CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key="kqvAIVqKjU0Jmp5Ip0JR"
-)
+try:
+    from inference_sdk import InferenceHTTPClient
+    ROBOFLOW_CLIENT = InferenceHTTPClient(
+        api_url="https://serverless.roboflow.com",
+        api_key="kqvAIVqKjU0Jmp5Ip0JR"
+    )
+except ImportError:
+    ROBOFLOW_CLIENT = None
 
 logger = setup_logger("api.main")
 
-# Create tables if they don't exist
-Base.metadata.create_all(bind=engine)
+# Create tables if they don't exist — wrapped to prevent startup crash
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"WARNING: Could not create DB tables: {e}")
 
 app = FastAPI(
     title="SmartContainer Risk Engine API",
@@ -79,7 +83,31 @@ def load_precomputed_data():
 
 @app.on_event("startup")
 async def startup_event():
-    load_precomputed_data()
+    try:
+        load_precomputed_data()
+    except Exception as e:
+        print(f"WARNING: Could not load precomputed data: {e}")
+
+    # Create testadmin user if not exists
+    db = SessionLocal()
+    try:
+        admin_user = auth.get_user_by_username(db, username="testadmin")
+        if not admin_user:
+            hashed_password = auth.get_password_hash("password123")
+            db_user = models_db.User(
+                username="testadmin",
+                email="admin@smartcontainer.com",
+                hashed_password=hashed_password,
+                role=models_db.UserRole.ADMIN.value,
+                is_active=True
+            )
+            db.add(db_user)
+            db.commit()
+            logger.info("Test admin user 'testadmin' created successfully.")
+    except Exception as e:
+        logger.error(f"Failed to create testadmin user on startup: {e}")
+    finally:
+        db.close()
 
 
 # ---- Auth Endpoints ----
