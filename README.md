@@ -53,30 +53,7 @@ By intelligently parsing manifest data, dwelling times, declared weights vs. act
 
 The system is built on a decoupled, asynchronous microservices architecture to ensure high throughput and independent scaling of the intelligence tier.
 
-```mermaid
-graph TD
-    %% Styling
-    classDef frontend fill:#C06820,stroke:#8B4513,stroke-width:2px,color:#fff,font-weight:bold
-    classDef backend fill:#2E7D32,stroke:#1B5E20,stroke-width:2px,color:#fff,font-weight:bold
-    classDef memory fill:#C62828,stroke:#b71c1c,stroke-width:2px,color:#fff,font-weight:bold
-    classDef db fill:#455A64,stroke:#263238,stroke-width:2px,color:#fff,font-weight:bold
-
-    %% Nodes
-    Client["💻 Next.js Dashboard<br/>(Client UI)"]:::frontend
-    API["⚡ FastAPI Server<br/>(Core API)"]:::backend
-    Auth["🔐 JWT Auth Layer"]:::backend
-    ML_Task["⚙️ ML Pipeline<br/>(Background Task)"]:::backend
-    SQLite["🐘 SQLite<br/>(Persistent Data)"]:::db
-
-    %% Connections
-    Client -- "REST API" --> API
-    API -- "Authentication" --> Auth
-    Auth -- "Validates User" --> SQLite
-
-    API -- "Spawns Inference" --> ML_Task
-    ML_Task -- "Predicts Risk" --> SQLite
-    API -- "Reads Results" --> SQLite
-```
+![System Architecture](docs/images/architecture.jpeg)
 
 ---
 
@@ -214,7 +191,7 @@ Navigate your browser to `http://localhost:3000`.
 | Kaivalya Bhatt | Team Leader/Frontend & ML Engineer | [KaivalyaBhatt](https://github.com/KaivalyaBhatt) |
 | Priyansh Patel | Full Stack & ML Engineer           | [PriyanshPatel](https://github.com/Priyansh9506)  |
 | Yashi Jain     | Data & UX Engineer                 | [YashiJain](https://github.com/Yashi1609)         |
-| Rutva Patel    | Computer Vision & ML Engineer           | [RutvaPatel](https://github.com/Rutva-11)         |
+| Rutva Patel    | Computer Vision & ML Engineer      | [RutvaPatel](https://github.com/Rutva-11)         |
 
 ---
 
