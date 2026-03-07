@@ -2,36 +2,7 @@
 
 ## High-Level Overview
 
-```mermaid
-flowchart TD
-    User["USER / JUDGE<br>(Browser / API Client)"]
-
-    subgraph Frontend["Next.js Frontend"]
-        direction TB
-        F_Pages["SPA Dashboard Components<br>(Overview, Analytics, Containers, Detail, ImageAnalysis, Admin, Settings)"]
-        F_API["API Client<br>(JWT Auth)"]
-        F_Pages --- F_API
-    end
-
-    subgraph Backend["FastAPI Backend"]
-        direction TB
-        B_Routes["/stats<br>/results<br>/container/{id}<br>/predict<br>/analyze-container-image<br>/login, /register, /admin/users"]
-        B_Tasks["In-Memory Task Manager<br>(BackgroundTasks)"]
-        B_Routes --- B_Tasks
-    end
-
-    subgraph ML_Pipeline["ML Pipeline"]
-        direction TB
-        L["Data Loader"] --> P["Preprocessor"]
-        P --> F["Feature Engineering"]
-        F --> E["Ensemble Model"]
-        E --> S["SHAP Explainability"]
-    end
-
-    User --> Frontend
-    Frontend -- "REST API" --> Backend
-    Backend --> ML_Pipeline
-```
+![System Architecture](images/architecture.jpeg)
 
 ## Data Flow
 
@@ -78,17 +49,4 @@ flowchart TD
 
 ## Ensemble Model Architecture
 
-```mermaid
-flowchart TD
-    Input["Input Features (40+)"]
-
-    Input --> XGB["XGBoost<br>(multi-class)"]
-    Input --> LGBM["LightGBM<br>(multi-class)"]
-    Input --> Anom["Anomaly Detection<br>(Isolation Forest + Stats + Rules)"]
-
-    XGB -- "P(class) (40%)" --> WA["Weighted Avg Risk Score<br>(0 - 100)"]
-    LGBM -- "P(class) (35%)" --> WA
-    Anom -- "Anomaly Score (25%)" --> WA
-
-    WA --> Thresh["Thresholding<br>≥55 → Critical<br><55 → Low Risk"]
-```
+![Ensemble Model Architecture](images/EnsembleModelArchitecture.jpeg)
