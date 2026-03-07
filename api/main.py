@@ -25,13 +25,14 @@ from src.logger import setup_logger
 from api.database import engine, Base, get_db, SessionLocal
 from api import models_db, schemas, auth
 from api.task_manager import task_manager
-from inference_sdk import InferenceHTTPClient
-
-# Initialize Roboflow client
-ROBOFLOW_CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key="kqvAIVqKjU0Jmp5Ip0JR"
-)
+try:
+    from inference_sdk import InferenceHTTPClient
+    ROBOFLOW_CLIENT = InferenceHTTPClient(
+        api_url="https://serverless.roboflow.com",
+        api_key="kqvAIVqKjU0Jmp5Ip0JR"
+    )
+except ImportError:
+    ROBOFLOW_CLIENT = None
 
 logger = setup_logger("api.main")
 
