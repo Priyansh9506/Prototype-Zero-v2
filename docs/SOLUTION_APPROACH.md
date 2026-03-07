@@ -97,6 +97,14 @@ Hybrid approach combining three methods:
 
 ---
 
+
+### 4. Image Damage Detection (Computer Vision)
+
+- Analyzes container images via **Roboflow Inference API** (`container-damage-detection-uekkr/1`).
+- Identifies features such as `dent`, `rust`, `hole`, `deframe`.
+- Categorizes containers intelligently into **Safe**, **Faulty**, or **Damaged** states based on severity levels.
+- Seamlessly injects dynamic mock SHAP values derived from identified damage patterns.
+
 ## What Makes Our Solution Stand Out
 
 | Differentiator               | Details                                                             |
@@ -105,7 +113,8 @@ Hybrid approach combining three methods:
 | **Multi-model ensemble**     | XGBoost + LightGBM + Isolation Forest (most teams use single model) |
 | **Hybrid anomaly detection** | Statistical + ML + Domain rules (triple-layered)                    |
 | **SHAP explainability**      | Not just predictions but WHY — mandatory per problem statement      |
-| **Full-stack dashboard**     | Next.js with glassmorphism UI, interactive charts, drill-down       |
+| **Full-stack dashboard**     | Next.js (SPA architecture) with glassmorphism UI, Recharts, drill-down |
+| **Visual Inspection**        | Integrated Image Analysis Filters and robust CSV exports            |
 | **REST API**                 | FastAPI with pagination, filtering, CSV upload → live prediction    |
 | **Deployment-ready**         | Vercel + Railway, modular structure                                 |
 

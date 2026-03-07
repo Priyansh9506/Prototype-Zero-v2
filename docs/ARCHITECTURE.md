@@ -8,14 +8,14 @@ flowchart TD
 
     subgraph Frontend["Next.js Frontend"]
         direction TB
-        F_Pages["Dashboard Page<br>Upload Page<br>Container Detail<br>Analytics Page"]
+        F_Pages["SPA Dashboard Components<br>(Overview, Analytics, Containers, Detail, ImageAnalysis, Admin, Settings)"]
         F_API["API Client<br>(JWT Auth)"]
         F_Pages --- F_API
     end
 
     subgraph Backend["FastAPI Backend"]
         direction TB
-        B_Routes["/stats<br>/results<br>/container/{id}<br>/predict (upload)"]
+        B_Routes["/stats<br>/results<br>/container/{id}<br>/predict<br>/analyze-container-image<br>/login, /register, /admin/users"]
         B_Tasks["In-Memory Task Manager<br>(BackgroundTasks)"]
         B_Routes --- B_Tasks
     end
@@ -73,6 +73,8 @@ flowchart TD
 | `GET`  | `/predictions`                        | All predictions (CSV format)                    |
 | `POST` | `/predict`                            | Upload CSV → run inference → return predictions |
 | `GET`  | `/feature-importance`                 | Global feature importance ranking               |
+| `POST` | `/analyze-container-image`            | Object detection for container damage           |
+| `POST` | `/login`, `/register`                 | JWT Authentication                              |
 
 ## Ensemble Model Architecture
 

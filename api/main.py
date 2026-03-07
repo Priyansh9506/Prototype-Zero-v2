@@ -531,6 +531,62 @@ def generate_image_shap(predictions):
     return shap_data
 
 
+def annotate_image(image_path, detections, output_path):
+    """
+    Draw bounding boxes and labels on the image using OpenCV.
+    """
+    try:
+        import cv2
+        import numpy as np
+
+        # Load the image
+        img = cv2.imread(str(image_path))
+        if img is None:
+            logger.error(f"Could not read image for annotation: {image_path}")
+            return False
+
+        # Draw each detection
+        for det in detections:
+            # Roboflow returns x, y (center) and width, height
+            x = det['x']
+            y = det['y']
+            w = det['width']
+            h = det['height']
+            label = det['class']
+            confidence = det['confidence']
+
+            # Convert center-based to corner-based
+            x1 = int(x - w/2)
+            y1 = int(y - h/2)
+            x2 = int(x + w/2)
+            y2 = int(y + h/2)
+
+            # Colors for different classes
+            color_map = {
+                "dent": (0, 165, 255),    # Orange
+                "rust": (0, 0, 255),      # Red
+                "hole": (0, 0, 139),      # Dark Red
+                "deframe": (255, 0, 0)    # Blue
+            }
+            color = color_map.get(label.lower(), (0, 255, 0)) # Default green
+
+            # Draw rectangle
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+
+            # Draw label with background
+            text = f"{label} {confidence:.2f}"
+            (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+            cv2.rectangle(img, (x1, y1 - th - 10), (x1 + tw, y1), color, -1)
+            cv2.putText(img, text, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+
+        # Save the annotated image
+        cv2.imwrite(str(output_path), img)
+        return True
+    except Exception as e:
+        logger.error(f"Annotation failed: {e}")
+        return False
+
+
 def classify_condition(predictions):
     if len(predictions) == 0:
         return "Safe"
@@ -607,6 +663,16 @@ async def analyze_container_image(
                 )
                 
                 detections = result.get("predictions", [])
+                
+                # Save original image with prefix
+                original_path = image_dir / f"original_{file.filename}"
+                with open(original_path, "wb") as f:
+                    f.seek(0)
+                    f.write(content)
+
+                # Annotate and save to the primary path
+                annotate_image(tmp_path, detections, persistent_path)
+                
                 condition = classify_condition(detections)
                 all_detections.extend(detections)
                 

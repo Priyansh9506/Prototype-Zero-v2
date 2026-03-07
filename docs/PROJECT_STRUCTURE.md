@@ -45,18 +45,32 @@ Prototype-Zero/
 │   └── pipeline.py                   # Full inference pipeline script
 │
 ├── 📂 api/                           # REST API
-│   └── main.py                       # FastAPI server with CRUD + upload endpoints
+│   ├── main.py                       # FastAPI server, background tasks, inference execution
+│   ├── auth.py                       # JWT authentication logic
+│   ├── database.py                   # SQLite connection
+│   ├── models_db.py                  # SQLAlchemy models
+│   ├── schemas.py                    # Pydantic schema validation
+│   └── task_manager.py               # In-memory background task tracking
 │
-├── 📂 dashboard/                     # Next.js Frontend (created via create-next-app)
+├── 📂 dashboard/                     # Next.js React SPA Dashboard
 │   ├── src/
-│   │   ├── app/                      # App Router pages
-│   │   │   ├── page.js               # Dashboard overview
-│   │   │   ├── containers/page.js    # Searchable container table
-│   │   │   ├── containers/[id]/      # Container detail with SHAP
-│   │   │   ├── upload/page.js        # CSV upload → prediction
-│   │   │   └── analytics/page.js     # Deep analytics & charts
-│   │   ├── components/               # Reusable React components
-│   │   └── styles/                   # Glassmorphism dark theme CSS
+│   │   ├── app/
+│   │   │   ├── page.jsx              # Main Single Page Application shell
+│   │   │   ├── api.js                # API client functions
+│   │   │   ├── data.js               # Shared states/context
+│   │   │   └── globals.css           # Global Theme & Tailwind CSS
+│   │   ├── components/               # Feature Components
+│   │   │   ├── Admin.jsx               # Admin user management
+│   │   │   ├── Analytics.jsx           # Performance-optimized charts
+│   │   │   ├── Containers.jsx          # Searchable container table & robust CSV exports
+│   │   │   ├── DetailPanel.jsx         # Container inspection pane
+│   │   │   ├── ImageAnalysis.jsx       # Visual damage assessment pane
+│   │   │   ├── Login.jsx               # JWT Gateway
+│   │   │   ├── Overview.jsx            # High-level metrics
+│   │   │   ├── Settings.jsx            # Config toggles
+│   │   │   ├── Sidebar.jsx             # Nav menu
+│   │   │   └── UploadData.jsx          # CSV upload area
+
 │   ├── package.json
 │   └── next.config.js
 │

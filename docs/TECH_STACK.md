@@ -9,6 +9,8 @@
 | **Anomaly Detection** | Isolation Forest + Statistical + Rules | Hybrid approach for robust detection             |
 | **Explainability**    | SHAP (TreeExplainer)                   | Gold-standard model interpretability             |
 | **API Framework**     | FastAPI                                | Async, auto-docs, type-safe REST API             |
+| **Computer Vision**   | Roboflow Inference                     | Container damage object detection                |
+| **Database & Auth**   | SQLite, SQLAlchemy, python-jose (JWT)  | Persistent data & JWT authorization              |
 | **Data Processing**   | Pandas, NumPy                          | Industry-standard data manipulation              |
 
 ## Frontend (Dashboard)

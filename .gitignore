@@ -2,6 +2,7 @@
 venv/
 .venv/
 env/
+venv_new/
 # Python
 __pycache__/
 *.py[cod]
